@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#10b981" />
+  <title>KissanAI — Plant Health & Identification</title>
+
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+
+  <!-- iOS Home Screen Support (iOS ignores the manifest for icons/standalone mode) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="KissanAI" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <style>
+    /* Chatbot UI Styles */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 480px;
+      border: 1px solid var(--card-border, #e2e8f0);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .chat-box {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background-color: #f8fafc;
+    }
+    .msg-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      max-width: 85%;
+    }
+    .user-wrapper {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .bot-wrapper {
+      align-self: flex-start;
+    }
+    .pfp {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .user-pfp {
+      background: #059669;
+    }
+    .bot-pfp {
+      background: #1e293b;
+    }
+    .bubble {
+      padding: 0.6rem 0.85rem;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .user-bubble {
+      background: #059669;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+    .bot-bubble {
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+      border-bottom-left-radius: 2px;
+    }
+    .chat-input-area {
+      display: flex;
+      padding: 0.75rem;
+      border-top: 1px solid #e2e8f0;
+      background: #ffffff;
+      gap: 0.5rem;
+    }
+    .chat-input-area input {
+      flex: 1;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+    .chat-input-area button {
+      padding: 0.6rem 1rem;
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .chat-input-area button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- App Header & Logo Image -->
+    <header>
+      <div class="brand">
+        <img src="logo.png" alt="KissanAI Logo" class="app-logo" />
+        <h1>KissanAI</h1>
+      </div>
+    </header>
+
+    <!-- Page Navigation -->
+    <nav>
+      <button class="nav-btn active" onclick="switchPage('scan', this)">Analyzer / تجزیہ کار</button>
+      <button class="nav-btn" onclick="switchPage('chat', this)">Chat / بات چیت</button>
+      <button class="nav-btn" onclick="switchPage('about', this)">About / ہمارے بارے میں</button>
+    </nav>
+
+    <!-- PAGE 1: ANALYZER (HOME) -->
+    <div id="page-scan" class="page active">
+      <div class="card">
+        <div class="form-group">
+          <label class="upload-zone" for="imageInput" id="uploadLabel">
+            <span class="upload-icon">📸</span>
+            <span id="uploadText">Take photo or upload leaf image / تصویر لیں یا اپ لوڈ کریں</span>
+          </label>
+          <input type="file" id="imageInput" accept="image/*" capture="environment" />
+          
+          <img id="preview" alt="Leaf preview" />
+          
+          <button class="btn-action" id="submitBtn" onclick="analyzeLeaf()">Analyze Leaf / پتے کا تجزیہ کریں</button>
+        </div>
+      </div>
+
+      <!-- Diagnostic Results Section -->
+      <div id="results" class="card" style="display: none;">
+        <h3 style="margin-bottom: 0.75rem;">Analysis Summary / تجزیہ کا خلاصہ</h3>
+        <div id="statusSection"></div>
+        
+        <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 1rem 0;" />
+        
+        <h3 style="margin-bottom: 0.5rem;">Identified Species / شناخت شدہ اقسام</h3>
+        <ul id="speciesList"></ul>
+
+        <h3 style="margin-top: 1.25rem; margin-bottom: 0.5rem;">Diagnostics & Care / تشخیص اور دیکھ بھال</h3>
+        <div id="diseaseSection"></div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: CHATBOT -->
+    <div id="page-chat" class="page">
+      <div class="card">
+        <h3 style="margin-bottom: 0.25rem;">Kissan Assistant / کسان اسسٹنٹ</h3>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem;">
+          Ask questions about plant care, diseases, or farming in English or Urdu.
+        </p>
+
+        <div class="chat-container">
+          <div id="chat-box" class="chat-box"></div>
+          <div class="chat-input-area">
+            <input type="text" id="chatMessage" placeholder="Ask about plant care / پودوں کی دیکھ بھال کے بارے میں پوچھیں..." />
+            <button id="sendChatBtn" onclick="sendChatMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: ABOUT -->
+    <div id="page-about" class="page">
+      <div class="card">
+        <h2 style="color: var(--primary); margin-bottom: 0.75rem;">About KissanAI / ہمارے بارے میں</h2>
+        
+        <p style="color: var(--muted); margin-bottom: 0.4rem;">
+          KissanAI is an intelligent, lightweight diagnostic Progressive Web Application built to deliver fast plant species identification and plant pathology detection.
+        </p>
+        
+        <div class="urdu-block" style="margin-top: 0.4rem; padding-top: 0.4rem; margin-bottom: 1rem;">
+          <p style="color: var(--muted);">
+            کسان اے آئی ایک ذہین اور ہلکی پھلکی تشخیص کار پروگریسو ویب ایپلی کیشن ہے جو پودوں کی اقسام کی فوری شناخت اور بیماریوں کی تشخیص کے لیے بنائی گئی ہے۔
+          </p>
+        </div>
+        
+        <h3 style="margin-top: 1rem; margin-bottom: 0.5rem;">Core Features / اہم خصوصیات</h3>
+        <ul style="list-style-type: none; padding-left: 0;">
+          <li style="margin-bottom: 0.75rem;">
+            <div><strong>Species Categorization:</strong> Identifies species with confidence metrics.</div>
+            <div class="urdu-block" style="margin-top: 0.2rem; padding-top: 0.2rem; font-size: 0.9rem;">
+              <strong>اقسام کی درجہ بندی:</strong> قابل اعتماد پیمائش کے ساتھ پودوں کی اقسام کی شناخت کرتا ہے۔
+            </div>
+          </li>
+          <li style="margin-bottom: 0.75rem;">
+            <div><strong>Pathology Detection:</strong> Detects fungal, bacterial, and viral infections.</div>
+            <div class="urdu-block" style="margin-top: 0.2rem; padding-top: 0.2rem; font-size: 0.9rem;">
+              <strong>بیماریوں کی تشخیص:</strong> پھپھوندی، بیکٹیریا اور وائرل انفیکشن کی تشخیص کرتا ہے۔
+            </div>
+          </li>
+          <li style="margin-bottom: 0.75rem;">
+            <div><strong>Treatment Advice:</strong> Provides biological and chemical intervention options.</div>
+            <div class="urdu-block" style="margin-top: 0.2rem; padding-top: 0.2rem; font-size: 0.9rem;">
+              <strong>علاج کا مشورہ:</strong> حیاتیاتی اور کیمیائی علاج کے حل فراہم کرتا ہے۔
+            </div>
+          </li>
+        </ul>
+
+        <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 1.25rem 0;" />
+
+        <h3 style="margin-bottom: 0.25rem;">Lead Developer / لیڈ ڈیولپر</h3>
+        <p style="font-weight: 700; color: var(--text);">Syed Ebtisam Ali</p>
+        <p style="font-size: 0.85rem; color: var(--muted);">Software Engineer & Full-Stack Developer</p>
+        <div class="urdu-block" style="margin-top: 0.2rem; padding-top: 0.2rem;">
+          <p style="font-size: 0.85rem; color: var(--muted);">سافٹ ویئر انجینئر اور فل اسٹیک ڈیولپر</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright Footer -->
+    <footer>
+      <p>&copy; 2026 Syed Ebtisam Ali. All rights reserved.</p>
+    </footer>
+
+  </div>
+
+  <!-- External JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
